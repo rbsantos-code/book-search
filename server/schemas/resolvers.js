@@ -14,5 +14,60 @@ const resolvers = {
 
             throw new AuthenticationError('not logged in!');
         }
+    },
+
+    Mutations: {
+        addUser: async (parent, args) => {
+            const user = await User.create(args);
+            const token = signToken(user);
+
+            return { user, token }
+        },
+        login: async (parent, { email, passwork }) => {
+            const user = await User.findOne({ email });
+
+            if (!user) {
+                throw new AuthenticationError('Incorrect Credencials');
+            }
+
+            const correctPw = await user.isCorrectPassword(password);
+
+            if (!correctPw) {
+                throw new AuthenticationError('Incorrect Credencials');
+            }
+
+            const token = signToken(user);
+
+            return { user, token };
+        },
+        saveBook: async (parent, { bookInfo }, context) => {
+            if (context.user) {
+                const updatedBook = await User.findByIdAndUpdate(
+                    { _id: context.user._id },
+                    { $push: { savedBook: bookInfo } },
+                    { new: true }
+                );
+
+                return updatedBook;
+            }
+
+            throw new AuthenticationError('You need to be logged in!');
+        },
+        removeBook: async (parent, { bookId }, context) => {
+            if (context.user) {
+                const updatedBook = await User.findOneAndUpdate(
+                    { _id: context.user._id },
+                    { $pull: { savedBook: { bookId } } },
+                    { new: true }
+                );
+
+                return updatedBook;
+            }
+
+            throw new AuthenticationError('You need to be logged in!');
+        }
     }
-}
+};
+
+
+module.exports = resolvers;
